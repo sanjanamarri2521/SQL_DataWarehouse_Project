@@ -9,7 +9,7 @@ This portfolio project showcases a complete end-to-end data warehousing and anal
 
 The architecture follows the **Medallion Architecture** approach, featuring **Bronze**, **Silver**, and **Gold** layers:
 
-![Data Architecture](docs/Data Architecture.drawio.png)
+![Data Architecture](docs/Data_Architecture.drawio.png)
 
 1. **Bronze Layer**: Raw data ingested directly from source systems (CSV files), stored in its original format in SQL Server.  
 2. **Silver Layer**: Transformed and standardized data after cleansing and normalization—ready for further processing.  
