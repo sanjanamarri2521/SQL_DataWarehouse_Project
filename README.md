@@ -54,15 +54,15 @@ All tools used are freely available:
 
 ###  ETL Data Flow  
 Visual representation of the complete ETL pipeline:
-![ETL Data Flow](docs/data_flow.png)
+![ETL Data Flow](docs/Data_Lineage.drawio.png)
 
 ###  Schema Design  
 Star schema diagram for fact and dimension tables:
-![Data Schema](docs/data_models.png)
+![Data Schema](docs/Star_Schema.drawio.png)
 
 ###  Data Integration Overview  
 High-level overview of how ERP and CRM data sources are unified:
-![Data Integration](docs/data_integration.png)
+![Data Integration](docs/Data_Integration.drawio.png)
 
 ---
 
