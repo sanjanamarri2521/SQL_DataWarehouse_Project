@@ -123,7 +123,7 @@ data-warehouse-project/
 
 ## Acknowledgments
 
-Special thanks to **Baraa Khatib Salkini**, an IT professional and YouTuber with channel [Data with Baraa](https://www.youtube.com/@DatawithBaraa), whose video tutorial [**"SQL Data Warehouse Project"**](https://www.youtube.com/watch?v=9GVqKuTVANE&list=PLNcg_FV9n7qZ4Ym8ZriYT6WF8TaC2e_R7) provided valuable guidance throughout the development of this project.
+Special thanks to **Baraa Khatib Salkini**, an IT professional and YouTuber with channel [Data with Baraa](https://www.youtube.com/@DatawithBaraa), whose video tutorial [**"SQL Data Warehouse from Scratch | Full Hands-On Data Engineering Project"**](https://www.youtube.com/watch?v=9GVqKuTVANE&list=PLNcg_FV9n7qZ4Ym8ZriYT6WF8TaC2e_R7) provided valuable guidance throughout the development of this project.
 
 ---
 
