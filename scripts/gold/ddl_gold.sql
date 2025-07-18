@@ -12,7 +12,7 @@ Usage:
 ===================================================
 */
 -- ================================================
--- Create Fact Table: gold.dim_products
+-- Create Dimension Table: gold.dim_products
 -- ================================================
 IF OBJECT_ID('gold.dim_products', 'V') IS NOT NULL
 	DROP VIEW gold.dim_products;
@@ -36,7 +36,7 @@ LEFT JOIN silver.erp_px_cat_g1v2 pc
 ON pn.cat_id = pc.id
 WHERE pn.prd_end_dt IS NULL --Filter out all historical data
 -- ================================================
--- Create Fact Table: gold.dim_customers
+-- Create Dimension Table: gold.dim_customers
 -- ================================================
 IF OBJECT_ID('gold.dim_customers', 'V') IS NOT NULL
 	DROP VIEW gold.dim_customers;
