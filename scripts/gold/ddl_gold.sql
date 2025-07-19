@@ -1,132 +1,74 @@
-/*
-===================================================
-DDL Script: Create Gold Views
-===================================================
-Script Purpose:
-	This script creates views for the Gold Layer in the data warehouse.
-	The Gold layer represents the final dimension and fact tables (Star Schema)
-
-	Each view performs tranformations and combines data from the Silver layer to produce a clean, enriched, and business-ready dataset
-Usage:
-	- These views can be queried directly for analytics and reporting.
-===================================================
-*/
--- ================================================
--- Create Dimension Table: gold.dim_users
--- ================================================
-DROP VIEW IF EXISTS gold.dim_users;
-GO
-CREATE VIEW gold.dim_users AS
-SELECT DISTINCT
-    user_id
-FROM silver.orders;
-GO
-
--- ================================================
--- Create Dimension Table: gold.dim_products
--- ================================================
-DROP VIEW IF EXISTS gold.dim_products;
+-- ***********************************************
+-- Create Fact Table: gold.dim_products
+-- ***********************************************
+IF OBJECT_ID('gold.dim_products', 'V') IS NOT NULL
+	DROP VIEW gold.dim_products;
 GO
 CREATE VIEW gold.dim_products AS
-SELECT DISTINCT
-    product_id,
-    product_name,
-    department_id,
-    aisle_id
-FROM silver.products;
-GO
-
--- ================================================
--- Create Dimension Table: gold.dim_departments
--- ================================================
-DROP VIEW IF EXISTS gold.dim_departments;
-GO
-CREATE VIEW gold.dim_departments AS
-SELECT DISTINCT
-    department_id,
-    department
-FROM silver.departments;
-GO
-
--- ================================================
--- Create Dimension Table: gold.dim_aisles
--- ================================================
-DROP VIEW IF EXISTS gold.dim_aisles;
-GO
-CREATE VIEW gold.dim_aisles AS
-SELECT DISTINCT
-    aisle_id,
-    aisle
-FROM silver.aisles;
-GO
-
--- ================================================
--- Create Fact Table: gold.fact_orders_flat
--- ================================================
-DROP VIEW IF EXISTS gold.fact_orders_flat;
-GO
-CREATE VIEW gold.fact_orders_flat AS
 SELECT 
-    o.user_id,
-	o.order_id,
-    o.order_number,
-    o.order_dow AS order_day_name,
-    o.order_hour_of_day AS order_hour,
-    o.days_since_prior_order,
-    p.product_id,
-    p.product_name,
-    a.aisle_id,
-    a.aisle,
-    d.department_id,
-    d.department,
-    op.reordered
-FROM silver.order_products op 
-LEFT JOIN silver.orders o ON op.order_id = o.order_id
-LEFT JOIN silver.products p ON op.product_id = p.product_id
-LEFT JOIN silver.aisles a ON p.aisle_id = a.aisle_id
-LEFT JOIN silver.departments d ON p.department_id = d.department_id;
+	ROW_NUMBER() OVER (ORDER BY pn.prd_start_dt, pn.prd_key) AS product_key,
+	pn.prd_id AS product_id,
+	pn.prd_key AS product_number,
+	pn.prd_nm AS product_name,
+	pn.cat_id AS category_id,
+	pc.cat AS category,
+	pc.subcat subcategory,
+	pc.maintenance,
+	pn.prd_cost AS cost,
+	pn.prd_line AS product_line,
+	pn.prd_start_dt AS start_date
+ 		
+FROM silver.crm_prd_info pn
+LEFT JOIN silver.erp_px_cat_g1v2 pc
+ON pn.cat_id = pc.id
+WHERE pn.prd_end_dt IS NULL --Filter out all historical data
+-- ***********************************************
+-- Create Fact Table: gold.dim_customers
+-- ***********************************************
+IF OBJECT_ID('gold.dim_customers', 'V') IS NOT NULL
+	DROP VIEW gold.dim_customers;
 GO
-
--- ================================================
--- Create Fact Table: gold.fact_product_stats
--- ================================================
-DROP VIEW IF EXISTS gold.fact_product_stats;
-GO
-CREATE VIEW gold.fact_product_stats AS
+CREATE VIEW gold.dim_customers AS
 SELECT 
-    p.product_id,
-    p.product_name,
-	d.department,
-    a.aisle,
-    COUNT(*) AS total_orders,
-    SUM(op.reordered) AS total_reorders,
-    ROUND(CAST(SUM(op.reordered) AS FLOAT) / COUNT(*), 2) AS reorder_rate    
-FROM silver.order_products op
-JOIN silver.products p ON op.product_id = p.product_id
-JOIN silver.departments d ON p.department_id = d.department_id
-JOIN silver.aisles a ON p.aisle_id = a.aisle_id
-GROUP BY 
-    p.product_id,
-    p.product_name,
-    d.department,
-    a.aisle;
-GO
+	 ROW_NUMBER() OVER (ORDER BY cst_id) AS customer_key,
+	 ci.cst_id AS customer_id,
+	 ci.cst_key AS customer_number,
+	 ci.cst_firstname AS first_name,
+	 ci.cst_lastname AS last_name,
+	 la.cntry AS country,
+	 ci.cst_marital_status AS marital_status,
+	 CASE WHEN ci.cst_gndr != 'n/a' THEN ci.cst_gndr -- CRM is the Master for gender Info
+		  ELSE COALESCE(ca.gen, 'n/a')
+	 END AS gender,
+	 ca.bdate AS birthdate,
+	 ci.cst_create_date AS create_date
 
--- ================================================
--- Create Fact Table: gold.fact_user_order_summary
--- ================================================
-DROP VIEW IF EXISTS gold.fact_user_order_summary;
+ FROM silver.crm_cust_info ci
+ LEFT JOIN silver.erp_cust_az12 ca
+ ON ci.cst_key = ca.cid
+ LEFT JOIN silver.erp_loc_a101 la
+ ON ci.cst_key = la.cid
+
+-- ***********************************************
+-- Create Fact Table: gold.fact_sales
+-- ***********************************************
+IF OBJECT_ID('gold.fact_sales', 'V') IS NOT NULL
+	DROP VIEW gold.fact_sales;
 GO
-CREATE VIEW gold.fact_user_order_summary AS
+CREATE VIEW gold.fact_sales AS
 SELECT 
-    o.user_id,
-    MAX(o.order_number) AS total_orders,
-    AVG(o.days_since_prior_order) AS avg_days_between_orders,
-    COUNT(p.product_id) AS total_products_ordered,
-    SUM(p.reordered) AS total_reordered,
-    1.0 * SUM(p.reordered) / COUNT(p.product_id) AS reorder_ratio
-FROM silver.orders o
-JOIN silver.order_products p ON o.order_id = p.order_id
-GROUP BY o.user_id;
-GO
+	sd.sls_ord_num AS order_number,
+	pr.product_key,
+	cu.customer_key,
+	sd.sls_order_dt AS order_date,
+	sd.sls_ship_dt AS shipping_date,
+	sd.sls_due_dt AS due_date,
+	sd.sls_sales AS sales_amount,
+	sd.sls_quantity AS quantity,
+	sd.sls_price AS price
+FROM silver.crm_sales_details sd
+LEFT JOIN gold.dim_products pr
+ON sd.sls_prd_key = pr.product_number
+LEFT JOIN gold.dim_customers cu
+ON sd.sls_cust_id = cu.customer_id
 
